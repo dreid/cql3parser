@@ -1,0 +1,203 @@
+# CQL3 grammar, effectively ported from:
+# https://github.com/apache/cassandra/blob/cassandra-1.2.0/src/java/org/apache/cassandra/cql3/Cql.g
+
+# Keywords can be matched as k('KEYWORD') for example k('SELECT'), k('DROP')
+
+k :expected = ws
+    (<letter*>:ls -> ls.upper()):kw
+    ?(kw in keywords and kw == expected) -> kw
+
+# Some keywords are aliases for other keywords, these resolve
+# to the name I like best.
+
+a_keyspace = ( k('KEYSPACE') | k('SCHEMA') ) -> 'KEYSPACE'
+a_table = ( k('TABLE') | k('COLUMNFAMILY') ) -> 'TABLE'
+
+# Unreserved keywords can also be used as column names and such.
+# XXX: I'm not sure why this includes native_type, I haven't figured out how to
+# use it.  (Or test it in a meaningful way.)
+unreserved_keyword = ws ( (<letter*>:ls -> ls.upper()):kw
+                          ?(kw in unreserved_keywords) -> kw
+                        | native_type:nt -> nt.args[-1] )
+
+# native_type in cql3/Cql.g is basically a mapping of keyword objects to
+# some other handy methods.  This isn't that though.
+# This just returns a term that has a keyword argument, and the java type as a
+# string.
+
+native_type = ws (<letter*>:ls -> ls.upper()):kw
+                 ?(kw in native_types) -> t.NativeType(kw, native_types[kw])
+
+# Literals
+
+# Unquoted identifiers are case-insensitive and canonically lowercalse.
+identifier = <letter (letterOrDigit | '_')*>:i -> t.Identifier(i.lower())
+
+# Quoted names and string literals both preserve case and escape their
+# quote characters with an extra quote character so you can quote character
+# while you quote character...
+
+escaped_double_quote = '""' -> '"'
+quoted_name = '"' (escaped_double_quote | (~'"' anything))*:n '"'
+    -> t.QuotedName(''.join(n))
+
+escaped_single_quote = "''" -> "'"
+string = "'" (escaped_single_quote | (~"'" anything))*:s "'" -> ''.join(s)
+
+# Numbers are pretty cool I guess.
+
+digits = <digit+>
+
+int_part = ('-' | -> ''):sign digits:ds -> sign + ds
+integer = int_part:i -> int(i)
+
+exponent = ('e' | 'E') ('+' | '-')? digits
+float = int_part:i <('.' digits exponent?) | exponent>:tail
+    -> float(i + tail)
+
+# UUID literals, fancy.
+hex = :x ?(x in 'abcdefABCDEF0123456789')
+
+uuid = <hex{8} '-' (hex{4} '-'){3} hex{12}>:u -> UUID(u)
+timeuuid = uuid
+
+# booleans only two of them, nothing to see here, move along.
+
+boolean = ( k('TRUE') -> True
+          | k('FALSE') -> False )
+
+# maps (these are sooooo complicated)
+
+map_pair = ws final_term:k ws ':' ws final_term:v -> (k, v)
+
+map = ( '{' ws '}' -> {}
+      | '{' map_pair:first ws (',' map_pair)*:rest ws '}' -> dict([first] + rest) )
+
+# Terms
+
+qmark = '?' -> t.Binding()
+
+final_term = ( string
+             | uuid
+             | float
+             | integer
+             | boolean )
+
+term = final_term | qmark
+
+# Statements (now on to the important stuff.)
+
+identifier_or_quoted = identifier | quoted_name
+
+keyspace = ws identifier_or_quoted:n -> t.Keyspace(n)
+keyspace_prefix = keyspace:k '.' -> k
+
+table = ws keyspace_prefix?:k identifier_or_quoted:n -> t.Table(n, k)
+index = ws identifier:i -> t.Index(i)
+
+# XXX: This includes unreserved_keyword which includes native_type, but just
+# the java class name.
+# I don't really know what that means as a column name.
+# But this is straight out of cql3/Cql.g
+
+cident = ws (identifier | quoted_name | unreserved_keyword )
+column = cident:n -> t.Column(n)
+
+# usernames are weird, they're strings or identifiers (not quoted names?)
+user = ws ( identifier | string ):n -> t.User(n)
+
+# Properties are often found after WITH
+# XXX: This needs to include map literals.
+
+property_value = ws ( boolean
+                    | unreserved_keyword
+                    | string
+                    | identifier
+                    | float
+                    | integer
+                    | map )
+
+property = cident:n ws '=' property_value:v -> t.Property(n, v)
+properties = property:first (k('AND') property)*:rest -> t.Properties([first] + rest)
+
+# USE keyspace
+
+use = k('USE') keyspace:k -> t.Use(k)
+
+# DROP (TABLE|COLUMNFAMILY) [keyspace.]table
+# DROP (KEYSPACE|SCHEMA) keyspace
+# DROP INDEX index
+# DROP USER user
+
+drop = k('DROP') ( a_keyspace keyspace
+                 | a_table table
+                 | k('INDEX') index
+                 | k('USER') user ):r -> t.Drop(r)
+
+# TRUNCATE table
+
+truncate = k('TRUNCATE') table:n -> t.Truncate(n)
+
+# LIST USERS
+
+list_users = k('LIST') k('USERS') -> t.List(t.Users())
+
+# REVOKE <permission> ON <resource> FROM <username>
+
+revoke = k('REVOKE') permission_or_all:p k('ON') resource:r k('FROM') user:u
+    -> t.Revoke(p, r, u)
+
+permission = ( k('CREATE')
+             | k('ALTER')
+             | k('DROP')
+             | k('SELECT')
+             | k('MODIFY')
+             | k('AUTHORIZE')):p -> t.Permission(p)
+
+permission_or_all = ( k('ALL') k('PERMISSIONS')? -> t.AllPermissions()
+                  | permission:p k('PERMISSION')? -> p )
+
+resource = ( k('ALL') k('KEYSPACES') -> t.AllKeyspaces()
+           | a_keyspace keyspace
+           | a_table table )
+
+# GRANT <permission> ON <resource> TO <username>
+
+grant = k('GRANT') permission_or_all:p k('ON') resource:r k('TO') user:u
+    -> t.Grant(p, r, u)
+
+# CREATE USER <username> [WITH PASSWORD <password>] [SUPERUSER|NOSUPERUSER]
+
+password = ws string
+
+create_user = k('CREATE') k('USER') user:u
+    ( k('WITH') k('PASSWORD') password )?:p
+    ( k('SUPERUSER') -> True
+    | k('NOSUPERUSER') -> False )?:s
+    -> t.CreateUser(u, p, s)
+
+# ALTER USER <username> [WITH PASSWORD <password>] [SUPERUSER|NOSUPERUSER]
+
+alter_user = k('ALTER') k('USER') user:u
+    ( k('WITH') k('PASSWORD') password )?:p
+    ( k('SUPERUSER') -> True
+    | k('NOSUPERUSER') -> False )?:s
+    -> t.AlterUser(u, p, s)
+
+# CREATE INDEX [indexName] ON columnFamily (columnName)
+
+create_index = k('CREATE') k('INDEX') (~k('ON') index )?:i
+    k('ON') table:n ws '(' column:c ')'
+    -> t.CreateIndex(i, n, c)
+
+# CREATE KEYSPACE <KEYSPACE> WITH attr1 = value1 AND attr2 = value2
+
+create_keyspace = k('CREATE') k('KEYSPACE') keyspace:k
+    k('WITH') properties:p
+    -> t.CreateKeyspace(k, p)
+
+# ALTER KEYSPACE <KS> WITH <property> = <value>
+
+alter_keyspace = k('ALTER') k('KEYSPACE') keyspace:k
+    k('WITH') properties:p
+    -> t.AlterKeyspace(k, p)
