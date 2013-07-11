@@ -133,6 +133,25 @@ def test_map():
     }
 
 
+def test_list():
+    assert CQL3("[]").list() == []
+    assert CQL3("[1, 2, 3, 'foo']").list() == [1, 2, 3, 'foo']
+
+
+def test_set():
+    assert CQL3("{}").set() == set([])
+    assert CQL3("{1, 2, 1, 1}").set() == set([1, 2])
+
+
+def test_set_operations():
+    assert CQL3("1, 2, 'foo'").set_operations() == [1, 2, 'foo']
+    assert CQL3(
+        "1, 2, { 'foo': 'bar', 'baz': 'bax' }"
+    ).set_operations() == [1, 2,  {'foo': 'bar', 'baz': 'bax'}]
+    assert CQL3("1, [2, 3]").set_operations() == [1, [2, 3]]
+    assert CQL3("1, {1, 2, 3}, 2").set_operations() == [1, set([1, 2, 3]), 2]
+
+
 def test_terms():
     assert CQL3("1.0").term() == 1.0
     assert CQL3("1").term() == 1
@@ -427,3 +446,4 @@ def test_INSERT():
         [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
         [t.Binding(), 'foo'],
         [t.Timestamp(100000000)])
+

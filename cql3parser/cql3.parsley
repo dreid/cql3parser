@@ -71,7 +71,20 @@ boolean = ( k('TRUE') -> True
 map_pair = ws final_term:k ws ':' ws final_term:v -> (k, v)
 
 map = ( '{' ws '}' -> {}
-      | '{' map_pair:first ws (',' map_pair)*:rest ws '}' -> dict([first] + rest) )
+      | '{' map_pair:first ws (',' map_pair)*:rest ws '}'
+        -> dict([first] + rest) )
+
+# lists
+
+term_list = final_term:first ws (',' ws final_term)*:rest -> [first] + rest
+
+list = ( '[' ws ']' -> []
+       | '[' ws term_list:l ws ']' -> l )
+
+# sets
+
+set = ( '{' ws '}' -> set([])
+      | '{' ws term_list:l ws '}' -> set(l) )
 
 # Terms
 
@@ -124,7 +137,10 @@ properties = property:first (k('AND') property)*:rest -> t.Properties([first] + 
 # Operations
 
 set_operation = ( final_term
-                | qmark )
+                | qmark
+                | set
+                | map
+                | list )
 
 set_operations = ws set_operation:first (ws ',' ws set_operation)*:rest
     -> [first] + rest
