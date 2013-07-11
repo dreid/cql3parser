@@ -251,3 +251,19 @@ insert = k('INSERT') k('INTO') table:n
     k('VALUES') ws '(' set_operations:ss ')'
     using:u
     -> t.Insert(n, cs, ss, u)
+
+# SELECT <expression>
+# FROM <CF>
+# WHERE KEY = "key1" AND COL > 1 AND COL < 100
+# LIMIT <NUMBER>;
+
+# XXX: there is so much more
+
+relation = column:c ws '=':o ws term:v -> t.Relation(c, o, v)
+
+select = k('SELECT') ws ( '*' -> t.SelectAll() ):s
+    k('FROM') table:n
+    ( k('WHERE') ws relation:first
+        (k('AND') relation)*:rest -> [first] + rest )?:w
+    ( k('LIMIT') ws integer )?:l
+    -> t.Select(s, n, w, t.Limit(l))

@@ -446,3 +446,14 @@ def test_INSERT():
         [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
         [t.Binding(), 'foo'],
         [t.Timestamp(100000000)])
+
+
+def test_simple_SELECT():
+    assert CQL3(
+        "SELECT * FROM table WHERE key = 'tacos' LIMIT 10"
+    ).select() == t.Select(
+        t.SelectAll(),
+        t.Table(t.Identifier('table'), None),
+        [t.Relation(t.Column(t.Identifier('key')), '=', 'tacos')],
+        t.Limit(10)
+    )
