@@ -83,7 +83,8 @@ def test_quoted_name():
     assert CQL3('"foo"').quoted_name() == t.QuotedName('foo')
     assert CQL3('"fOo"').quoted_name() == t.QuotedName('fOo')
     assert CQL3('"foo bar"').quoted_name() == t.QuotedName('foo bar')
-    assert CQL3('"foo ""bar"" baz"').quoted_name() == t.QuotedName('foo "bar" baz')
+    assert CQL3(
+        '"foo ""bar"" baz"').quoted_name() == t.QuotedName('foo "bar" baz')
 
 
 def test_string():
@@ -136,7 +137,7 @@ def test_terms():
     assert CQL3("1.0").term() == 1.0
     assert CQL3("1").term() == 1
     assert CQL3("'foo bar'").term() == 'foo bar'
-    assert CQL3('True').term() == True
+    assert CQL3('True').term() is True
     assert CQL3("?").term() == t.Binding()
 
     u = uuid.uuid4()
@@ -144,9 +145,12 @@ def test_terms():
 
 
 def test_keyspace():
-    assert CQL3("anKeyspace").keyspace() == t.Keyspace(t.Identifier('ankeyspace'))
-    assert CQL3('"anKeyspace"').keyspace() == t.Keyspace(t.QuotedName('anKeyspace'))
-    assert CQL3('       an_keyspace').keyspace() == t.Keyspace(t.Identifier('an_keyspace'))
+    assert CQL3(
+        "anKeyspace").keyspace() == t.Keyspace(t.Identifier('ankeyspace'))
+    assert CQL3(
+        '"anKeyspace"').keyspace() == t.Keyspace(t.QuotedName('anKeyspace'))
+    assert CQL3(
+        '   an_keyspace').keyspace() == t.Keyspace(t.Identifier('an_keyspace'))
 
 
 def test_table():
@@ -172,17 +176,17 @@ def test_username():
 def test_properties():
     assert CQL3(
         "gc_grace_seconds = 10 "
-        "AND comment = 'foo bar'").properties() == t.Properties([
-            t.Property(t.Identifier('gc_grace_seconds'), 10),
-            t.Property(t.Identifier('comment'), 'foo bar')
-        ])
+        "AND comment = 'foo bar'"
+    ).properties() == t.Properties([
+        t.Property(t.Identifier('gc_grace_seconds'), 10),
+        t.Property(t.Identifier('comment'), 'foo bar')])
 
     assert CQL3(
         "foo = "
         "'org.apache.cassandra.db.marshal.AsciiType'"
     ).properties() == t.Properties([
-            t.Property(t.Identifier('foo'), 'org.apache.cassandra.db.marshal.AsciiType')
-    ])
+        t.Property(t.Identifier('foo'),
+                   'org.apache.cassandra.db.marshal.AsciiType')])
 
     assert CQL3("foo = True").properties() == t.Properties([
         t.Property(t.Identifier('foo'), True)])
@@ -193,17 +197,26 @@ def test_properties():
 
 
 def test_USE():
-    assert CQL3("USE anKeyspace").use() == t.Use(t.Keyspace(t.Identifier("ankeyspace")))
+    assert CQL3(
+        "USE anKeyspace").use() == t.Use(
+        t.Keyspace(t.Identifier("ankeyspace")))
 
 
 def test_DROP():
-    assert CQL3("DROP KEYSPACE k").drop() == t.Drop(t.Keyspace(t.Identifier("k")))
-    assert CQL3("DROP SCHEMA k").drop() == t.Drop(t.Keyspace(t.Identifier("k")))
-    assert CQL3("DROP TABLE t").drop() == t.Drop(t.Table(t.Identifier("t"), None))
-    assert CQL3("DROP COLUMNFAMILY t").drop() == t.Drop(
+    assert CQL3(
+        "DROP KEYSPACE k").drop() == t.Drop(t.Keyspace(t.Identifier("k")))
+    assert CQL3(
+        "DROP SCHEMA k").drop() == t.Drop(t.Keyspace(t.Identifier("k")))
+    assert CQL3(
+        "DROP TABLE t").drop() == t.Drop(t.Table(t.Identifier("t"), None))
+    assert CQL3(
+        "DROP COLUMNFAMILY t").drop() == t.Drop(
         t.Table(t.Identifier("t"), None))
-    assert CQL3("DROP INDEX index").drop() == t.Drop(t.Index(t.Identifier('index')))
-    assert CQL3("DROP USER username").drop() == t.Drop(t.User(t.Identifier("username")))
+    assert CQL3(
+        "DROP INDEX index").drop() == t.Drop(t.Index(t.Identifier('index')))
+    assert CQL3(
+        "DROP USER username").drop() == t.Drop(
+        t.User(t.Identifier("username")))
 
 
 def test_TRUNCATE():
@@ -219,89 +232,113 @@ def test_REVOKE():
     assert CQL3('REVOKE ALL ON ALL KEYSPACES FROM user').revoke() == t.Revoke(
         t.AllPermissions(), t.AllKeyspaces(), t.User(t.Identifier('user')))
 
-    assert CQL3('REVOKE ALL PERMISSIONS ON KEYSPACE keyspace FROM user'
-                ).revoke() == t.Revoke(
-                    t.AllPermissions(),
-                    t.Keyspace(t.Identifier('keyspace')),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'REVOKE ALL PERMISSIONS ON KEYSPACE keyspace FROM user'
+    ).revoke() == t.Revoke(
+        t.AllPermissions(),
+        t.Keyspace(t.Identifier('keyspace')),
+        t.User(t.Identifier('user')))
 
-    assert CQL3('REVOKE ALL PERMISSIONS ON TABLE keyspace.table FROM user'
-                ).revoke() == t.Revoke(
-                    t.AllPermissions(),
-                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'REVOKE ALL PERMISSIONS ON TABLE keyspace.table FROM user'
+    ).revoke() == t.Revoke(
+        t.AllPermissions(),
+        t.Table(t.Identifier('table'),
+                t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
+
 
 @pytest.mark.parametrize(
     ('permission',),
     [('CREATE',), ('ALTER',), ('DROP',),
      ('SELECT',), ('MODIFY',), ('AUTHORIZE',)])
 def test_REVOKE_PERMISSION(permission):
-    assert CQL3('REVOKE {0} ON TABLE keyspace.table FROM user'.format(permission)
-                ).revoke() == t.Revoke(
-                    t.Permission(permission),
-                    t.Table(t.Identifier('table'),
-                            t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'REVOKE {0} ON TABLE keyspace.table FROM user'.format(permission)
+    ).revoke() == t.Revoke(
+        t.Permission(permission),
+        t.Table(t.Identifier('table'),
+                t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
 
-    assert CQL3('REVOKE {0} PERMISSION ON TABLE keyspace.table FROM user'.format(permission)
-                ).revoke() == t.Revoke(
-                    t.Permission(permission),
-                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'REVOKE {0} PERMISSION ON TABLE '
+        'keyspace.table FROM user'.format(permission)
+    ).revoke() == t.Revoke(
+        t.Permission(permission),
+        t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
 
 
 def test_GRANT():
     assert CQL3('GRANT ALL ON ALL KEYSPACES TO user').grant() == t.Grant(
         t.AllPermissions(), t.AllKeyspaces(), t.User(t.Identifier('user')))
 
-    assert CQL3('GRANT ALL PERMISSIONS ON KEYSPACE keyspace TO user'
-                ).grant() == t.Grant(
-                    t.AllPermissions(),
-                    t.Keyspace(t.Identifier('keyspace')),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'GRANT ALL PERMISSIONS ON KEYSPACE keyspace TO user'
+    ).grant() == t.Grant(
+        t.AllPermissions(),
+        t.Keyspace(t.Identifier('keyspace')),
+        t.User(t.Identifier('user')))
 
-    assert CQL3('GRANT ALL PERMISSIONS ON TABLE keyspace.table TO user'
-                ).grant() == t.Grant(
-                    t.AllPermissions(),
-                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'GRANT ALL PERMISSIONS ON TABLE keyspace.table TO user'
+    ).grant() == t.Grant(
+        t.AllPermissions(),
+        t.Table(t.Identifier('table'),
+                t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
+
 
 @pytest.mark.parametrize(
     ('permission',),
     [('CREATE',), ('ALTER',), ('DROP',),
      ('SELECT',), ('MODIFY',), ('AUTHORIZE',)])
 def test_GRANT_PERMISSION(permission):
-    assert CQL3('GRANT {0} ON TABLE keyspace.table TO user'.format(permission)
-                ).grant() == t.Grant(
-                    t.Permission(permission),
-                    t.Table(t.Identifier('table'),
-                            t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'GRANT {0} ON TABLE keyspace.table TO user'.format(permission)
+    ).grant() == t.Grant(
+        t.Permission(permission),
+        t.Table(t.Identifier('table'),
+                t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
 
-    assert CQL3('GRANT {0} PERMISSION ON TABLE keyspace.table TO user'.format(permission)
-                ).grant() == t.Grant(
-                    t.Permission(permission),
-                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                    t.User(t.Identifier('user')))
+    assert CQL3(
+        'GRANT {0} PERMISSION ON TABLE '
+        'keyspace.table TO user'.format(permission)
+    ).grant() == t.Grant(
+        t.Permission(permission),
+        t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
+        t.User(t.Identifier('user')))
 
 
 def test_CREATE_USER():
     assert CQL3('CREATE USER username').create_user() == t.CreateUser(
         t.User(t.Identifier('username')), None, None)
 
-    assert CQL3('CREATE USER username SUPERUSER').create_user() == t.CreateUser(
+    assert CQL3(
+        'CREATE USER username SUPERUSER'
+    ).create_user() == t.CreateUser(
         t.User(t.Identifier('username')), None, True)
 
-    assert CQL3('CREATE USER username NOSUPERUSER').create_user() == t.CreateUser(
+    assert CQL3(
+        'CREATE USER username NOSUPERUSER'
+    ).create_user() == t.CreateUser(
         t.User(t.Identifier('username')), None, False)
 
-    assert CQL3("CREATE USER username WITH PASSWORD 'foo'").create_user() == t.CreateUser(
+    assert CQL3(
+        "CREATE USER username WITH PASSWORD 'foo'"
+    ).create_user() == t.CreateUser(
         t.User(t.Identifier('username')), 'foo', None)
 
-    assert CQL3("CREATE USER username WITH PASSWORD 'foo' SUPERUSER").create_user() == t.CreateUser(
+    assert CQL3(
+        "CREATE USER username WITH PASSWORD 'foo' SUPERUSER"
+    ).create_user() == t.CreateUser(
         t.User(t.Identifier('username')), 'foo', True)
 
-    assert CQL3("CREATE USER username WITH PASSWORD 'foo' NOSUPERUSER").create_user() == t.CreateUser(
+    assert CQL3(
+        "CREATE USER username WITH PASSWORD 'foo' NOSUPERUSER"
+    ).create_user() == t.CreateUser(
         t.User(t.Identifier('username')), 'foo', False)
 
 
@@ -315,45 +352,59 @@ def test_ALTER_USER():
     assert CQL3('ALTER USER username NOSUPERUSER').alter_user() == t.AlterUser(
         t.User(t.Identifier('username')), None, False)
 
-    assert CQL3("ALTER USER username WITH PASSWORD 'foo'").alter_user() == t.AlterUser(
+    assert CQL3(
+        "ALTER USER username WITH PASSWORD 'foo'"
+    ).alter_user() == t.AlterUser(
         t.User(t.Identifier('username')), 'foo', None)
 
-    assert CQL3("ALTER USER username WITH PASSWORD 'foo' SUPERUSER").alter_user() == t.AlterUser(
+    assert CQL3(
+        "ALTER USER username WITH PASSWORD 'foo' SUPERUSER"
+    ).alter_user() == t.AlterUser(
         t.User(t.Identifier('username')), 'foo', True)
 
-    assert CQL3("ALTER USER username WITH PASSWORD 'foo' NOSUPERUSER").alter_user() == t.AlterUser(
+    assert CQL3(
+        "ALTER USER username WITH PASSWORD 'foo' NOSUPERUSER"
+    ).alter_user() == t.AlterUser(
         t.User(t.Identifier('username')), 'foo', False)
 
 
 def test_CREATE_INDEX():
-    assert CQL3('CREATE INDEX ON table (column)').create_index() == t.CreateIndex(
+    assert CQL3(
+        'CREATE INDEX ON table (column)'
+    ).create_index() == t.CreateIndex(
         None,
         t.Table(t.Identifier('table'), None),
         t.Column(t.Identifier('column')))
 
-    assert CQL3('CREATE INDEX column_index ON table (column)').create_index() == t.CreateIndex(
+    assert CQL3(
+        'CREATE INDEX column_index ON table (column)'
+    ).create_index() == t.CreateIndex(
         t.Index(t.Identifier('column_index')),
         t.Table(t.Identifier('table'), None),
         t.Column(t.Identifier('column')))
 
 
 def test_CREATE_KEYSPACE():
-    assert CQL3("CREATE KEYSPACE ks "
-                "WITH REPLICATION = { 'class' : 'SimpleStrategy', "
-                "'replication_factor': '1' }").create_keyspace() == t.CreateKeyspace(
-                    t.Keyspace(t.Identifier('ks')),
-                    t.Properties([
-                        t.Property(t.Identifier('replication'),
-                                   {'class': 'SimpleStrategy',
-                                   'replication_factor': '1'})]))
+    assert CQL3(
+        "CREATE KEYSPACE ks "
+        "WITH REPLICATION = { 'class' : 'SimpleStrategy', "
+        "'replication_factor': '1' }"
+    ).create_keyspace() == t.CreateKeyspace(
+        t.Keyspace(t.Identifier('ks')),
+        t.Properties([
+            t.Property(t.Identifier('replication'),
+                       {'class': 'SimpleStrategy',
+                        'replication_factor': '1'})]))
 
 
 def test_ALTER_KEYSPACE():
-    assert CQL3("ALTER KEYSPACE ks "
-                "WITH REPLICATION = { 'class' : 'SimpleStrategy', "
-                "'replication_factor': '1' }").alter_keyspace() == t.AlterKeyspace(
-                    t.Keyspace(t.Identifier('ks')),
-                    t.Properties([
-                        t.Property(t.Identifier('replication'),
-                                   {'class': 'SimpleStrategy',
-                                   'replication_factor': '1'})]))
+    assert CQL3(
+        "ALTER KEYSPACE ks "
+        "WITH REPLICATION = { 'class' : 'SimpleStrategy', "
+        "'replication_factor': '1' }"
+    ).alter_keyspace() == t.AlterKeyspace(
+        t.Keyspace(t.Identifier('ks')),
+        t.Properties([
+            t.Property(t.Identifier('replication'),
+                       {'class': 'SimpleStrategy',
+                        'replication_factor': '1'})]))

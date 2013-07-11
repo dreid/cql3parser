@@ -125,7 +125,8 @@ bindings = {
     'unreserved_keywords': unreserved_keywords,
     'native_types': native_types,
     't': termMaker
-    }
+}
+
 
 def _load():
     grammar = os.path.join(os.path.dirname(__file__), 'cql3.parsley')
