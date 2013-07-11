@@ -102,6 +102,7 @@ index = ws identifier:i -> t.Index(i)
 
 cident = ws (identifier | quoted_name | unreserved_keyword )
 column = cident:n -> t.Column(n)
+columns = column:first (ws ',' ws column)*:rest -> [first] + rest
 
 # usernames are weird, they're strings or identifiers (not quoted names?)
 user = ws ( identifier | string ):n -> t.User(n)
@@ -119,6 +120,14 @@ property_value = ws ( boolean
 
 property = cident:n ws '=' property_value:v -> t.Property(n, v)
 properties = property:first (k('AND') property)*:rest -> t.Properties([first] + rest)
+
+# Operations
+
+set_operation = ( final_term
+                | qmark )
+
+set_operations = ws set_operation:first (ws ',' ws set_operation)*:rest
+    -> [first] + rest
 
 # USE keyspace
 
@@ -201,3 +210,28 @@ create_keyspace = k('CREATE') k('KEYSPACE') keyspace:k
 alter_keyspace = k('ALTER') k('KEYSPACE') keyspace:k
     k('WITH') properties:p
     -> t.AlterKeyspace(k, p)
+
+# INSERT INTO <CF> (<column>, <column>, <column>, ...)
+# VALUES (<value>, <value>, <value>, ...)
+# USING TIMESTAMP <long>;
+
+using_delete_objective = k('TIMESTAMP') ws integer:i -> t.Timestamp(i)
+
+using_objective = ( k('TTL') ws integer:i -> t.TTL(i)
+                  | using_delete_objective )
+
+using_delete = ( k('USING') using_delete_objective:first
+                    (k('AND') using_delete_objective)*:rest
+                    -> [first] + rest
+               | -> [] )
+
+using = ( k('USING') using_objective:first
+            (k('AND') using_objective)*:rest
+            -> [first] + rest
+        | -> [] )
+
+insert = k('INSERT') k('INTO') table:n
+    ws '(' columns:cs ws ')'
+    k('VALUES') ws '(' set_operations:ss ')'
+    using:u
+    -> t.Insert(n, cs, ss, u)

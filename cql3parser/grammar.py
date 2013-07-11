@@ -128,10 +128,14 @@ bindings = {
 }
 
 
+def trace(*a):
+    print 'TRACE:', a
+
+
 def _load():
     grammar = os.path.join(os.path.dirname(__file__), 'cql3.parsley')
     with open(grammar, 'r') as g:
-        return makeGrammar(g.read(), bindings, 'cql3')
+        return makeGrammar(g.read(), bindings, 'cql3', tracefunc=trace)
 
 
 CQL3 = _load()

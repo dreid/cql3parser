@@ -408,3 +408,22 @@ def test_ALTER_KEYSPACE():
             t.Property(t.Identifier('replication'),
                        {'class': 'SimpleStrategy',
                         'replication_factor': '1'})]))
+
+
+def test_INSERT():
+    assert CQL3(
+        "INSERT INTO foo (bar, baz) VALUES (?, 'foo')"
+    ).insert() == t.Insert(
+        t.Table(t.Identifier('foo'), None),
+        [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
+        [t.Binding(), 'foo'],
+        [])
+
+    assert CQL3(
+        "INSERT INTO foo (bar, baz) VALUES (?, 'foo') "
+        "USING TIMESTAMP 100000000"
+    ).insert() == t.Insert(
+        t.Table(t.Identifier('foo'), None),
+        [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
+        [t.Binding(), 'foo'],
+        [t.Timestamp(100000000)])
