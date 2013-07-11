@@ -446,4 +446,3 @@ def test_INSERT():
         [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
         [t.Binding(), 'foo'],
         [t.Timestamp(100000000)])
-
