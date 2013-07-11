@@ -1,30 +1,32 @@
 import uuid
 
-from pytest import raises
+import pytest
 
 from parsley import ParseError, termMaker as t
 
 from cql3parser import CQL3, grammar, types
 
 
-def test_keywords():
+@pytest.mark.parametrize(
+    ("input", "expected"),
+    [(k, k.upper()) for k in grammar.keywords])
+def test_keywords(input, expected):
     """
     All defined keywords in the grammar are case insensitive and return their
     uppercase canonical representation.
 
     Example: k('SELECT') -> 'SELECT'
     """
-    for k in grammar.keywords:
-        assert CQL3(k).k(k) == k
-        assert CQL3(k.title()).k(k) == k
-        assert CQL3(k.lower()).k(k) == k
+    assert CQL3(input).k(input) == expected
+    assert CQL3(input.title()).k(input) == expected
+    assert CQL3(input.lower()).k(input) == expected
 
 
 def test_undefined_keyword():
     """
     Keywords not defined in CQL3 raise a ParseError.
     """
-    with raises(ParseError):
+    with pytest.raises(ParseError):
         assert CQL3('foobar').k('foobar')
 
 
@@ -47,23 +49,27 @@ def test_alias_keywords():
     assert CQL3('TABLE').a_table() == 'TABLE'
 
 
-def test_unreserved_keywords():
+@pytest.mark.parametrize(
+    ("keyword", "expected"),
+    [(uk, uk.upper()) for uk in grammar.unreserved_keywords])
+def test_unreserved_keywords(keyword, expected):
     """
     Some keywords aren't reserved.
     """
-    for uk in grammar.unreserved_keywords:
-        assert CQL3(uk).unreserved_keyword() == uk
-        assert CQL3(uk.title()).unreserved_keyword() == uk
-        assert CQL3(uk.lower()).unreserved_keyword() == uk
+    assert CQL3(keyword).unreserved_keyword() == expected
+    assert CQL3(keyword.title()).unreserved_keyword() == expected
+    assert CQL3(keyword.lower()).unreserved_keyword() == expected
 
 
 def test_unreserved_keywords_consume_leading_whitespace():
     assert CQL3('    KEY').unreserved_keyword() == 'KEY'
 
 
-def test_native_type():
-    for k, nt in types.native_types.iteritems():
-        assert CQL3(k).native_type() == t.NativeType(k, nt)
+@pytest.mark.parametrize(
+    ('keyword', 'native_type'),
+    types.native_types.items())
+def test_native_type(keyword, native_type):
+    assert CQL3(keyword).native_type() == t.NativeType(keyword, native_type)
 
 
 def test_identifiers():
@@ -225,19 +231,23 @@ def test_REVOKE():
                     t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
                     t.User(t.Identifier('user')))
 
-    for p in ['CREATE', 'ALTER', 'DROP', 'SELECT', 'MODIFY', 'AUTHORIZE']:
-        assert CQL3('REVOKE {0} ON TABLE keyspace.table FROM user'.format(p)
-                    ).revoke() == t.Revoke(
-                        t.Permission(p),
-                        t.Table(t.Identifier('table'),
-                                t.Keyspace(t.Identifier('keyspace'))),
-                        t.User(t.Identifier('user')))
+@pytest.mark.parametrize(
+    ('permission',),
+    [('CREATE',), ('ALTER',), ('DROP',),
+     ('SELECT',), ('MODIFY',), ('AUTHORIZE',)])
+def test_REVOKE_PERMISSION(permission):
+    assert CQL3('REVOKE {0} ON TABLE keyspace.table FROM user'.format(permission)
+                ).revoke() == t.Revoke(
+                    t.Permission(permission),
+                    t.Table(t.Identifier('table'),
+                            t.Keyspace(t.Identifier('keyspace'))),
+                    t.User(t.Identifier('user')))
 
-        assert CQL3('REVOKE {0} PERMISSION ON TABLE keyspace.table FROM user'.format(p)
-                    ).revoke() == t.Revoke(
-                        t.Permission(p),
-                        t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                        t.User(t.Identifier('user')))
+    assert CQL3('REVOKE {0} PERMISSION ON TABLE keyspace.table FROM user'.format(permission)
+                ).revoke() == t.Revoke(
+                    t.Permission(permission),
+                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
+                    t.User(t.Identifier('user')))
 
 
 def test_GRANT():
@@ -256,19 +266,23 @@ def test_GRANT():
                     t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
                     t.User(t.Identifier('user')))
 
-    for p in ['CREATE', 'ALTER', 'DROP', 'SELECT', 'MODIFY', 'AUTHORIZE']:
-        assert CQL3('GRANT {0} ON TABLE keyspace.table TO user'.format(p)
-                    ).grant() == t.Grant(
-                        t.Permission(p),
-                        t.Table(t.Identifier('table'),
-                                t.Keyspace(t.Identifier('keyspace'))),
-                        t.User(t.Identifier('user')))
+@pytest.mark.parametrize(
+    ('permission',),
+    [('CREATE',), ('ALTER',), ('DROP',),
+     ('SELECT',), ('MODIFY',), ('AUTHORIZE',)])
+def test_GRANT_PERMISSION(permission):
+    assert CQL3('GRANT {0} ON TABLE keyspace.table TO user'.format(permission)
+                ).grant() == t.Grant(
+                    t.Permission(permission),
+                    t.Table(t.Identifier('table'),
+                            t.Keyspace(t.Identifier('keyspace'))),
+                    t.User(t.Identifier('user')))
 
-        assert CQL3('GRANT {0} PERMISSION ON TABLE keyspace.table TO user'.format(p)
-                    ).grant() == t.Grant(
-                        t.Permission(p),
-                        t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
-                        t.User(t.Identifier('user')))
+    assert CQL3('GRANT {0} PERMISSION ON TABLE keyspace.table TO user'.format(permission)
+                ).grant() == t.Grant(
+                    t.Permission(permission),
+                    t.Table(t.Identifier('table'), t.Keyspace(t.Identifier('keyspace'))),
+                    t.User(t.Identifier('user')))
 
 
 def test_CREATE_USER():
