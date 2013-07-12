@@ -262,7 +262,8 @@ relation_operator = ( '=' | '<=' | '>=' | '<' | '>' )
 token_columns = k('TOKEN') ws '(' ws columns:cs ws ')' -> t.Token(cs)
 token_terms = k('TOKEN') ws '(' ws term_list:ts ws ')' -> t.Token(ts)
 
-token_relation = token_columns:c ws relation_operator:o ws token_terms:v
+token_relation = token_columns:c ws relation_operator:o ws
+    ( string | token_terms ):v
     -> t.Relation(c, o, v)
 
 relation = column:c ws

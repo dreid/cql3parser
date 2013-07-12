@@ -7,8 +7,11 @@ python:
 
 install:
   - pip install -r requirements.txt
+  - pip install coveralls
 
 script:
-  - flake8 -v .
-  - py.test -v
+  - flake8 -v cql3parser --show-source
+  - py.test -v --cov cql3parser
 
+after_success:
+  - coveralls

@@ -476,9 +476,18 @@ def test_token_relation():
     assert CQL3(
         "TOKEN(foo, bar) > TOKEN('one', 'two')"
     ).relations() == [t.Relation(
-        t.Token([t.Column(t.Identifier('foo')), t.Column(t.Identifier('bar'))]),
+        t.Token([t.Column(t.Identifier('foo')),
+                 t.Column(t.Identifier('bar'))]),
         '>',
         t.Token(['one', 'two']))]
+
+    assert CQL3(
+        "TOKEN(foo, bar) > 'foobarbaz'"
+    ).relations() == [t.Relation(
+        t.Token([t.Column(t.Identifier('foo')),
+                 t.Column(t.Identifier('bar'))]),
+        '>',
+        'foobarbaz')]
 
 
 def test_relations():
