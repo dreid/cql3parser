@@ -257,12 +257,21 @@ insert = k('INSERT') k('INTO') table:n
 # WHERE KEY = "key1" AND COL > 1 AND COL < 100
 # LIMIT <NUMBER>;
 
-# XXX: there is so much more
-
 relation_operator = ( '=' | '<=' | '>=' | '<' | '>' )
 
-relation = column:c ws relation_operator:o ws term:v -> t.Relation(c, o, v)
-relations = relation:first (k('AND') relation)*:rest -> [first] + rest
+token_columns = k('TOKEN') ws '(' ws columns:cs ws ')' -> t.Token(cs)
+token_terms = k('TOKEN') ws '(' ws term_list:ts ws ')' -> t.Token(ts)
+
+token_relation = token_columns:c ws relation_operator:o ws token_terms:v
+    -> t.Relation(c, o, v)
+
+relation = column:c ws
+    ( ( relation_operator:o ws term:v ) -> o, v
+    | ( k('IN') ws '(' ws term_list:tl ws ')' ) -> 'in', tl ):ov
+    -> t.Relation(c, ov[0], ov[1])
+
+relations = ( token_relation | relation ):first
+    (k('AND') ( token_relation | relation ))*:rest -> [first] + rest
 
 select = k('SELECT') ws ( '*' -> t.SelectAll() ):s
     k('FROM') table:n

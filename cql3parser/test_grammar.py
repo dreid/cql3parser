@@ -456,13 +456,29 @@ def test_INSERT():
         ['=', '>=', '<=', '>', '<'],
         [('0', 0),
          ("'foo'", 'foo'),
-        ("-1.0", -1.0),
-        ("?", t.Binding())])])
+         ("-1.0", -1.0),
+         ("?", t.Binding())])])
 def test_relation(operator, value, expected_value):
     assert CQL3(
         "key {0} {1}".format(operator, value)
     ).relations() == [t.Relation(
         t.Column(t.Identifier('key')), operator, expected_value)]
+
+
+def test_in_relation():
+    assert CQL3(
+        "key IN ('foo', 'bar', 'baz', 0)"
+    ).relations() == [t.Relation(
+        t.Column(t.Identifier('key')), 'in', ['foo', 'bar', 'baz', 0])]
+
+
+def test_token_relation():
+    assert CQL3(
+        "TOKEN(foo, bar) > TOKEN('one', 'two')"
+    ).relations() == [t.Relation(
+        t.Token([t.Column(t.Identifier('foo')), t.Column(t.Identifier('bar'))]),
+        '>',
+        t.Token(['one', 'two']))]
 
 
 def test_relations():
