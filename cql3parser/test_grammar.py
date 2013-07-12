@@ -2,6 +2,8 @@ import uuid
 
 import pytest
 
+from itertools import product
+
 from parsley import ParseError, termMaker as t
 
 from cql3parser import CQL3, grammar, types
@@ -448,12 +450,42 @@ def test_INSERT():
         [t.Timestamp(100000000)])
 
 
+@pytest.mark.parametrize(
+    ("operator", "value", "expected_value"),
+    [(x, y, z) for (x, (y, z)) in product(
+        ['=', '>=', '<=', '>', '<'],
+        [('0', 0),
+         ("'foo'", 'foo'),
+        ("-1.0", -1.0),
+        ("?", t.Binding())])])
+def test_relation(operator, value, expected_value):
+    assert CQL3(
+        "key {0} {1}".format(operator, value)
+    ).relations() == [t.Relation(
+        t.Column(t.Identifier('key')), operator, expected_value)]
+
+
+def test_relations():
+    assert CQL3(
+        "key = 'tacos' AND k2 >= 0 AND k2 <= 10 AND k3 > ?"
+    ).relations() == [
+        t.Relation(t.Column(t.Identifier('key')), '=', 'tacos'),
+        t.Relation(t.Column(t.Identifier('k2')), '>=', 0),
+        t.Relation(t.Column(t.Identifier('k2')), '<=', 10),
+        t.Relation(t.Column(t.Identifier('k3')), '>', t.Binding())]
+
+
 def test_simple_SELECT():
     assert CQL3(
-        "SELECT * FROM table WHERE key = 'tacos' LIMIT 10"
+        "SELECT * FROM table "
+        "WHERE key = 'tacos' AND k2 >= 0 AND k2 <= 10 AND k3 > ?"
+        "LIMIT 10"
     ).select() == t.Select(
         t.SelectAll(),
         t.Table(t.Identifier('table'), None),
-        [t.Relation(t.Column(t.Identifier('key')), '=', 'tacos')],
+        [t.Relation(t.Column(t.Identifier('key')), '=', 'tacos'),
+         t.Relation(t.Column(t.Identifier('k2')), '>=', 0),
+         t.Relation(t.Column(t.Identifier('k2')), '<=', 10),
+         t.Relation(t.Column(t.Identifier('k3')), '>', t.Binding())],
         t.Limit(10)
     )

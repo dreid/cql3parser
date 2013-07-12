@@ -259,11 +259,13 @@ insert = k('INSERT') k('INTO') table:n
 
 # XXX: there is so much more
 
-relation = column:c ws '=':o ws term:v -> t.Relation(c, o, v)
+relation_operator = ( '=' | '<=' | '>=' | '<' | '>' )
+
+relation = column:c ws relation_operator:o ws term:v -> t.Relation(c, o, v)
+relations = relation:first (k('AND') relation)*:rest -> [first] + rest
 
 select = k('SELECT') ws ( '*' -> t.SelectAll() ):s
     k('FROM') table:n
-    ( k('WHERE') ws relation:first
-        (k('AND') relation)*:rest -> [first] + rest )?:w
+    ( k('WHERE') ws relations )?:w
     ( k('LIMIT') ws integer )?:l
     -> t.Select(s, n, w, t.Limit(l))
