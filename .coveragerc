@@ -1,0 +1,4 @@
+[run]
+branch = True
+source = cql3parser
+omit = *test_*
