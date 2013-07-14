@@ -500,11 +500,35 @@ def test_relations():
         t.Relation(t.Column(t.Identifier('k3')), '>', t.Binding())]
 
 
+def test_selectors():
+    assert CQL3("*").selectors() == t.SelectAll()
+    assert CQL3("COUNT(*)").selectors() == t.Count()
+    assert CQL3("COUNT(1)").selectors() == t.Count()
+    assert CQL3("foo, bar, baz").selectors() == [
+        t.Column(t.Identifier('foo')),
+        t.Column(t.Identifier('bar')),
+        t.Column(t.Identifier('baz'))]
+
+    assert CQL3("foo, WRITETIME(bar), TTL(bar)").selectors() == [
+        t.Column(t.Identifier('foo')),
+        t.Function('WRITETIME', t.Column(t.Identifier('bar'))),
+        t.Function('TTL', t.Column(t.Identifier('bar')))]
+
+
 def test_simple_SELECT():
+    assert CQL3("SELECT * FROM table").select() == t.Select(
+        t.SelectAll(),
+        t.Table(t.Identifier('table'), None),
+        None, None, None, None)
+
+
+def test_all_clauses_SELECT():
     assert CQL3(
         "SELECT * FROM table "
-        "WHERE key = 'tacos' AND k2 >= 0 AND k2 <= 10 AND k3 > ?"
-        "LIMIT 10"
+        "WHERE key = 'tacos' AND k2 >= 0 AND k2 <= 10 AND k3 > ? "
+        "ORDER BY sort_key DESC "
+        "LIMIT 10 "
+        "ALLOW FILTERING"
     ).select() == t.Select(
         t.SelectAll(),
         t.Table(t.Identifier('table'), None),
@@ -512,5 +536,6 @@ def test_simple_SELECT():
          t.Relation(t.Column(t.Identifier('k2')), '>=', 0),
          t.Relation(t.Column(t.Identifier('k2')), '<=', 10),
          t.Relation(t.Column(t.Identifier('k3')), '>', t.Binding())],
-        t.Limit(10)
-    )
+        t.OrderBy(t.Column(t.Identifier('sort_key')), "DESC"),
+        t.Limit(10),
+        t.AllowFiltering())

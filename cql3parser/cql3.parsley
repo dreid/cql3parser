@@ -274,8 +274,19 @@ relation = column:c ws
 relations = ( token_relation | relation ):first
     (k('AND') ( token_relation | relation ))*:rest -> [first] + rest
 
-select = k('SELECT') ws ( '*' -> t.SelectAll() ):s
+selector = ( ( k('WRITETIME') | k('TTL') ):fn ws '(' ws column:c ws ')'
+                -> t.Function(fn, c)
+           | column )
+
+selectors = ( '*' -> t.SelectAll()
+            | k('COUNT') ws '(' ws ('*' | '1') ws ')' -> t.Count()
+            | selector:first ws (',' ws selector)*:rest -> [first] + rest )
+
+
+select = k('SELECT') ws selectors:s
     k('FROM') table:n
     ( k('WHERE') ws relations )?:w
-    ( k('LIMIT') ws integer )?:l
-    -> t.Select(s, n, w, t.Limit(l))
+    ( k('ORDER') k('BY') ws column:c ( k('ASC') | k('DESC') ):d -> t.OrderBy(c, d))?:o
+    ( k('LIMIT') ws integer:l -> t.Limit(l) )?:l
+    ( k('ALLOW') k('FILTERING') -> t.AllowFiltering() )?:af
+    -> t.Select(s, n, w, o, l, af)
