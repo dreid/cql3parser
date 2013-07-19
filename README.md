@@ -15,7 +15,7 @@ An experimental CQL3 parser written in python.
  - [X] CREATE USER
  - [X] ALTER USER
  - [X] LIST USERS
- - [ ] LIST PERMISSIONS
+ - [X] LIST PERMISSIONS
  - [X] CREATE INDEX
  - [X] CREATE KEYSPACE
  - [X] ALTER KEYSPACE

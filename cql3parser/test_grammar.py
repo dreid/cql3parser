@@ -333,6 +333,56 @@ def test_GRANT_PERMISSION(permission):
         t.User(t.Identifier('user')))
 
 
+def test_LIST_ALL_PERMISSIONS_OF():
+    assert CQL3(
+        "LIST ALL PERMISSIONS OF akers"
+    ).list_permissions() == t.ListPermissions(
+        t.AllPermissions(),
+        None,
+        t.User(t.Identifier('akers')),
+        None)
+
+
+def test_LIST_ALL_PERMISSIONS():
+    assert CQL3(
+        "LIST ALL PERMISSIONS"
+    ).list_permissions() == t.ListPermissions(
+        t.AllPermissions(),
+        None,
+        None,
+        None)
+
+
+def test_LIST_ALL_PERMISSIONS_ON():
+    assert CQL3(
+        "LIST ALL PERMISSIONS ON ravens.plays"
+    ).list_permissions() == t.ListPermissions(
+        t.AllPermissions(),
+        t.Table(t.Identifier('plays'), t.Keyspace(t.Identifier('ravens'))),
+        None,
+        None)
+
+
+def test_LIST_ALL_PERMISSIONS_NORECURSIVE():
+    assert CQL3(
+        "LIST ALL PERMISSIONS ON ravens.plays NORECURSIVE"
+    ).list_permissions() == t.ListPermissions(
+        t.AllPermissions(),
+        t.Table(t.Identifier('plays'), t.Keyspace(t.Identifier('ravens'))),
+        None,
+        t.NoRecursive())
+
+
+def test_LIST_permission():
+    assert CQL3(
+        "LIST SELECT PERMISSION ON ravens.plays"
+    ).list_permissions() == t.ListPermissions(
+        t.Permission('SELECT'),
+        t.Table(t.Identifier('plays'), t.Keyspace(t.Identifier('ravens'))),
+        None,
+        None)
+
+
 def test_CREATE_USER():
     assert CQL3('CREATE USER username').create_user() == t.CreateUser(
         t.User(t.Identifier('username')), None, None)

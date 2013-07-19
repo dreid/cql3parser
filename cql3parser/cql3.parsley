@@ -191,6 +191,18 @@ resource = ( k('ALL') k('KEYSPACES') -> t.AllKeyspaces()
 grant = k('GRANT') permission_or_all:p k('ON') resource:r k('TO') user:u
     -> t.Grant(p, r, u)
 
+# LIST permission_name PERMISSION
+# | LIST ALL PERMISSIONS
+#     ON resource OF user_name
+#     NORECURSIVE
+
+list_permissions = k('LIST')
+    permission_or_all:p
+    ( k('ON') ws table)?:n
+    ( k('OF') ws user)?:u
+    ( k('NORECURSIVE') -> t.NoRecursive() )?:r
+    -> t.ListPermissions(p, n, u, r)
+
 # CREATE USER <username> [WITH PASSWORD <password>] [SUPERUSER|NOSUPERUSER]
 
 password = ws string
