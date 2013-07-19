@@ -555,13 +555,16 @@ def test_DELETE():
 
 def test_DELETE_no_columns():
     assert CQL3(
-        "DELETE FROM MastersOfTheUniverse WHERE mastersID IN ('Man-At-Arms', 'Teela')"
+        "DELETE FROM MastersOfTheUniverse "
+        "WHERE mastersID IN ('Man-At-Arms', 'Teela')"
     ).delete() == t.Delete(
         None,
         t.Table(t.Identifier('mastersoftheuniverse'), None),
         [],
         [t.Relation(
-            t.Column(t.Identifier('mastersid')), 'in', ['Man-At-Arms', 'Teela'])]
+            t.Column(t.Identifier('mastersid')),
+            'in',
+            ['Man-At-Arms', 'Teela'])]
     )
 
 
