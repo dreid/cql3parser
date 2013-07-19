@@ -19,12 +19,12 @@ An experimental CQL3 parser written in python.
  - [X] CREATE INDEX
  - [X] CREATE KEYSPACE
  - [X] ALTER KEYSPACE
- - [ ] CREATE TABLE
- - [ ] ALTER TABLE
- - [ ] SELECT
- - [ ] INSERT
+ - [X] CREATE TABLE
+ - [X] ALTER TABLE
+ - [X] SELECT
+ - [X] INSERT
  - [ ] UPDATE
- - [ ] DELETE
+ - [X] DELETE
  - [ ] BATCH
 
 ## Extra Credit

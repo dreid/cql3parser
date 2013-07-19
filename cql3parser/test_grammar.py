@@ -539,3 +539,49 @@ def test_all_clauses_SELECT():
         t.OrderBy(t.Column(t.Identifier('sort_key')), "DESC"),
         t.Limit(10),
         t.AllowFiltering())
+
+
+def test_DELETE():
+    assert CQL3(
+        "DELETE col1, col2, col3 FROM Planeteers WHERE userID = 'Captain'"
+    ).delete() == t.Delete(
+        [t.Column(t.Identifier('col1')),
+         t.Column(t.Identifier('col2')),
+         t.Column(t.Identifier('col3'))],
+        t.Table(t.Identifier('planeteers'), None),
+        [],
+        [t.Relation(t.Column(t.Identifier('userid')), '=', 'Captain')])
+
+
+def test_DELETE_no_columns():
+    assert CQL3(
+        "DELETE FROM MastersOfTheUniverse WHERE mastersID IN ('Man-At-Arms', 'Teela')"
+    ).delete() == t.Delete(
+        None,
+        t.Table(t.Identifier('mastersoftheuniverse'), None),
+        [],
+        [t.Relation(
+            t.Column(t.Identifier('mastersid')), 'in', ['Man-At-Arms', 'Teela'])]
+    )
+
+
+def test_DELETE_USING_TIMESTAMP():
+    assert CQL3(
+        "DELETE email, phone FROM users USING TIMESTAMP 1318452291034 "
+        "WHERE user_name = 'jsmith'"
+    ).delete() == t.Delete(
+        [t.Column(t.Identifier('email')),
+         t.Column(t.Identifier('phone'))],
+        t.Table(t.Identifier('users'), None),
+        [t.Timestamp(1318452291034)],
+        [t.Relation(t.Column(t.Identifier('user_name')), '=', 'jsmith')])
+
+
+def test_DELETE_COLLECTION():
+    assert CQL3(
+        "DELETE todo ['2012-9-24'] FROM users WHERE user_id = 'frodo'"
+    ).delete() == t.Delete(
+        [t.CollectionItem(t.Column(t.Identifier('todo')), '2012-9-24')],
+        t.Table(t.Identifier('users'), None),
+        [],
+        [t.Relation(t.Column(t.Identifier('user_id')), '=', 'frodo')])

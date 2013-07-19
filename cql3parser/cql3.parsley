@@ -282,7 +282,6 @@ selectors = ( '*' -> t.SelectAll()
             | k('COUNT') ws '(' ws ('*' | '1') ws ')' -> t.Count()
             | selector:first ws (',' ws selector)*:rest -> [first] + rest )
 
-
 select = k('SELECT') ws selectors:s
     k('FROM') table:n
     ( k('WHERE') ws relations )?:w
@@ -290,3 +289,22 @@ select = k('SELECT') ws selectors:s
     ( k('LIMIT') ws integer:l -> t.Limit(l) )?:l
     ( k('ALLOW') k('FILTERING') -> t.AllowFiltering() )?:af
     -> t.Select(s, n, w, o, l, af)
+
+# DELETE name1, name2
+# FROM <CF>
+# USING TIMESTAMP <long>
+# WHERE KEY = keyname;
+
+collection_column = ws column:c ws '[' ws term:k ws ']'
+    -> t.CollectionItem(c, k)
+
+delete_selector = (collection_column | column)
+
+delete_selection = delete_selector:first ws (',' ws delete_selector)*:rest
+    -> [first] + rest
+
+delete = k('DELETE') ws (~k('FROM') delete_selection)?:c k('FROM') ws table:n
+    using_delete?:u
+    k('WHERE') ws relations:w
+    -> t.Delete(c, n, u, w)
+
