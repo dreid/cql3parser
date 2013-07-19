@@ -638,3 +638,22 @@ def test_DELETE_COLLECTION():
         t.Table(t.Identifier('users'), None),
         [],
         [t.Relation(t.Column(t.Identifier('user_id')), '=', 'frodo')])
+
+
+def test_BATCH():
+    assert CQL3("""
+BEGIN BATCH
+    INSERT INTO foo (bar, baz) VALUES ('foo', 'bar')
+    DELETE bar FROM foo WHERE baz = 'bar'
+APPLY BATCH
+""").batch() == t.Batch([
+        t.Insert(
+            t.Table(t.Identifier('foo'), None),
+            [t.Column(t.Identifier('bar')), t.Column(t.Identifier('baz'))],
+            ['foo', 'bar'],
+            []),
+        t.Delete(
+            [t.Column(t.Identifier('bar'))],
+            t.Table(t.Identifier('foo'), None),
+            [],
+            [t.Relation(t.Column(t.Identifier('baz')), '=', 'bar')])])

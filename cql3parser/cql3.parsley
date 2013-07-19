@@ -320,3 +320,35 @@ delete = k('DELETE') ws (~k('FROM') delete_selection)?:c k('FROM') ws table:n
     k('WHERE') ws relations:w
     -> t.Delete(c, n, u, w)
 
+# BEGIN BATCH
+#   UPDATE <CF> SET name1 = value1 WHERE KEY = keyname1;
+#   UPDATE <CF> SET name2 = value2 WHERE KEY = keyname2;
+#   UPDATE <CF> SET name3 = value3 WHERE KEY = keyname3;
+#   ...
+# APPLY BATCH
+#
+# OR
+#
+# BEGIN BATCH
+#   INSERT INTO <CF> (KEY, <name>) VALUES ('<key>', '<value>');
+#   INSERT INTO <CF> (KEY, <name>) VALUES ('<key>', '<value>');
+#   ...
+# APPLY BATCH
+#
+# OR
+#
+# BEGIN BATCH
+#   DELETE name1, name2 FROM <CF> WHERE key = <key>
+#   DELETE name3, name4 FROM <CF> WHERE key = <key>
+#   ...
+# APPLY BATCH
+
+batch_statement = (insert | delete):s ws ';'? -> s
+batch_statements = batch_statement:first (batch_statement)*:rest
+    -> [first] + rest
+
+batch = k('BEGIN') k('BATCH')
+    batch_statements:s
+    k('APPLY') k('BATCH') ws
+    -> t.Batch(s)
+
